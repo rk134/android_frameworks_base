@@ -114,6 +114,8 @@ public class SystemSettings {
                 Settings.System.SCREEN_FLASH_NOTIFICATION,
                 Settings.System.SCREEN_FLASH_NOTIFICATION_COLOR,
                 Settings.System.NOTIFICATION_COOLDOWN_ENABLED,
+                Settings.System.AMBIENT_NOTIFICATION_LIGHT,
+                Settings.System.AMBIENT_NOTIFICATION_LIGHT_AUTOMATIC,
                 Settings.System.NOTIFICATION_COOLDOWN_ALL,
                 Settings.System.NOTIFICATION_COOLDOWN_VIBRATE_UNLOCKED
         ));
