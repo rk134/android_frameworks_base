@@ -2407,6 +2407,7 @@ public class KeyguardUpdateMonitor implements TrustManager.TrustListener, Dumpab
         setStrongAuthTracker(mStrongAuthTracker);
 
         mPocketManager = (PocketManager) context.getSystemService(Context.POCKET_SERVICE);
+
         if (mPocketManager != null) {
             mPocketManager.addCallback(mPocketCallback);
         }
@@ -2829,7 +2830,7 @@ public class KeyguardUpdateMonitor implements TrustManager.TrustListener, Dumpab
         return mAssistantVisible && mKeyguardOccluded
                 && !(fingerprint != null && fingerprint.mAuthenticated)
                 && !mUserHasTrust.get(
-                        mSelectedUserInteractor.getSelectedUserId(), false); && !mIsDeviceInPocket;
+                        mSelectedUserInteractor.getSelectedUserId(), false) && !mIsDeviceInPocket;
 
     private boolean shouldTriggerActiveUnlockForAssistant() {
         return mAssistantVisible && mKeyguardOccluded
