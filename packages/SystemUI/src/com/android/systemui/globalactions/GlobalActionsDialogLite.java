@@ -716,18 +716,20 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
                         && currentUser.get().id != UserHandle.USER_SYSTEM) {
                     addIfShouldShowAction(tempActions, new LogoutAction());
                 }
-            } else if (GLOBAL_ACTION_KEY_EMERGENCY.equals(actionKey)) {
-                if (shouldDisplayEmergency()) {
-                    addIfShouldShowAction(tempActions, new EmergencyDialerAction());
-                }
-            } else if (GLOBAL_ACTION_KEY_SYSTEM_UPDATE.equals(actionKey)) {
-                addIfShouldShowAction(tempActions, new SystemUpdateAction());
-            } else {
-                Log.e(TAG, "Invalid global action key " + actionKey);
-            }
-            // Add here so we don't add more than one.
-            addedKeys.add(actionKey);
+                case GLOBAL_ACTION_KEY_EMERGENCY:
+                    if (shouldDisplayEmergency()) {
+                        addIfShouldShowAction(tempActions, new EmergencyDialerAction());
+                    }
+                    break;
+                case GLOBAL_ACTION_KEY_SYSTEM_UPDATE:
+                    addIfShouldShowAction(tempActions, new SystemUpdateAction());
+                    break;
+                default:
+                    Log.e(TAG, "Invalid global action key " + actionKey);
         }
+	}
+        // Add here so we don't add more than one.
+        addedKeys.add(actionKey);
 
         if (tempActions.contains(restartAction)) {
             // transfer restart and advanced restart to their own list of power actions

@@ -32,6 +32,7 @@ import static android.hardware.biometrics.BiometricConstants.BIOMETRIC_LOCKOUT_T
 import static android.hardware.biometrics.BiometricConstants.LockoutMode;
 import static android.hardware.biometrics.BiometricFaceConstants.FACE_ERROR_HW_UNAVAILABLE;
 import static android.hardware.biometrics.BiometricFaceConstants.FACE_ERROR_LOCKOUT_PERMANENT;
+import static com.android.keyguard.FaceAuthUiEvent.FACE_AUTH_UPDATED_FP_AUTHENTICATED;
 import static android.hardware.biometrics.BiometricSourceType.FACE;
 import static android.hardware.biometrics.BiometricSourceType.FINGERPRINT;
 import static android.os.BatteryManager.BATTERY_STATUS_UNKNOWN;
@@ -2407,7 +2408,6 @@ public class KeyguardUpdateMonitor implements TrustManager.TrustListener, Dumpab
         setStrongAuthTracker(mStrongAuthTracker);
 
         mPocketManager = (PocketManager) context.getSystemService(Context.POCKET_SERVICE);
-
         if (mPocketManager != null) {
             mPocketManager.addCallback(mPocketCallback);
         }
@@ -2831,6 +2831,7 @@ public class KeyguardUpdateMonitor implements TrustManager.TrustListener, Dumpab
                 && !(fingerprint != null && fingerprint.mAuthenticated)
                 && !mUserHasTrust.get(
                         mSelectedUserInteractor.getSelectedUserId(), false) && !mIsDeviceInPocket;
+    }
 
     private boolean shouldTriggerActiveUnlockForAssistant() {
         return mAssistantVisible && mKeyguardOccluded
@@ -2880,7 +2881,7 @@ public class KeyguardUpdateMonitor implements TrustManager.TrustListener, Dumpab
 
 
         boolean shouldListen = shouldListenKeyguardState && shouldListenUserState
-                && shouldListenBouncerState && shouldListenUdfpsState && !mBiometricPromptShowing;
+                && shouldListenBouncerState && shouldListenUdfpsState && !mBiometricPromptShowing
                 && !mIsDeviceInPocket;
         logListenerModelData(
                 new KeyguardFingerprintListenModel(
