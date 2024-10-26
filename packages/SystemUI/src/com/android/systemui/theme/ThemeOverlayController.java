@@ -489,7 +489,7 @@ public class ThemeOverlayController implements CoreStartable, Dumpable {
             // Force reload so that we update even when the main color has not changed
             reevaluateSystemTheme(true /* forceReload */);
         });
-        mSecureSettings.registerContentObserverForUser(
+        mSecureSettings.registerContentObserverForUserSync(
                 Settings.Secure.getUriFor(Settings.Secure.SYSTEM_BLACK_THEME),
                 false,
                 new ContentObserver(mBgHandler) {

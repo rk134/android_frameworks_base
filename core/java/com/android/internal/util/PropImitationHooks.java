@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2022 Paranoid Android
+ *           (C) 2023 StatiXOS
  *           (C) 2023 ArrowOS
  *           (C) 2023 The LibreMobileOS Foundation
  *
@@ -34,32 +35,79 @@ import com.android.internal.R;
 
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.Map;
+import java.util.Set;
 
 public class PropImitationHooks {
 
     private static final String TAG = "PropImitationHooks";
     private static final boolean DEBUG = false;
 
-    private static final String[] sCertifiedProps =
-            Resources.getSystem().getStringArray(R.array.config_certifiedBuildProperties);
-
-    private static final String sStockFp =
-            Resources.getSystem().getString(R.string.config_stockFingerprint);
-
-    private static final String sNetflixModel =
-            Resources.getSystem().getString(R.string.config_netflixSpoofModel);
-
     private static final String PACKAGE_ARCORE = "com.google.ar.core";
     private static final String PACKAGE_FINSKY = "com.android.vending";
     private static final String PACKAGE_GMS = "com.google.android.gms";
     private static final String PROCESS_GMS_UNSTABLE = PACKAGE_GMS + ".unstable";
-    private static final String PACKAGE_NETFLIX = "com.netflix.mediaclient";
+    private static final String PACKAGE_GPHOTOS = "com.google.android.apps.photos";
+
+    private static final String PACKAGE_SETUPWIZARD = "com.google.android.setupwizard";
+    private static final String PACKAGE_SUBSCRIPTION_RED = "com.google.android.apps.subscriptions.red";
+    private static final String PACKAGE_VELVET = "com.google.android.googlequicksearchbox";
 
     private static final ComponentName GMS_ADD_ACCOUNT_ACTIVITY = ComponentName.unflattenFromString(
             "com.google.android.gms/.auth.uiflows.minutemaid.MinuteMaidActivity");
 
+    private static final Map<String, String> sPixelNineProps = Map.of(
+            "PRODUCT", "komodo_beta",
+            "DEVICE", "komodo",
+            "HARDWARE", "komodo",
+            "MANUFACTURER", "Google",
+            "BRAND", "google",
+            "MODEL", "Pixel 9 Pro XL",
+            "ID", "AP31.240617.015",
+            "FINGERPRINT", "google/komodo_beta/komodo:15/AP31.240617.015/12207491:user/release-keys"
+    );
+
+    private static final Map<String, String> sPixelTabletProps = Map.of(
+            "PRODUCT", "tangorpro",
+            "DEVICE", "tangorpro",
+            "HARDWARE", "tangorpro",
+            "MANUFACTURER", "Google",
+            "BRAND", "google",
+            "MODEL", "Pixel Tablet",
+            "ID", "AP2A.240805.005",
+            "FINGERPRINT", "google/tangorpro/tangorpro:14/AP2A.240805.005/12025142:user/release-keys"
+    );
+
+    private static final Set<String> sPixelFeatures = Set.of(
+            "PIXEL_2017_EXPERIENCE",
+            "PIXEL_2017_PRELOAD",
+            "PIXEL_2018_EXPERIENCE",
+            "PIXEL_2018_PRELOAD",
+            "PIXEL_2019_EXPERIENCE",
+            "PIXEL_2019_MIDYEAR_EXPERIENCE",
+            "PIXEL_2019_MIDYEAR_PRELOAD",
+            "PIXEL_2019_PRELOAD",
+            "PIXEL_2020_EXPERIENCE",
+            "PIXEL_2020_MIDYEAR_EXPERIENCE",
+            "PIXEL_2021_MIDYEAR_EXPERIENCE",
+            "PIXEL_EXPERIENCE"
+    );
+
+    private static final Set<String> sTensorFeatures = Set.of(
+            "PIXEL_2021_EXPERIENCE",
+            "PIXEL_2022_EXPERIENCE",
+            "PIXEL_2022_MIDYEAR_EXPERIENCE",
+            "PIXEL_2023_EXPERIENCE",
+            "PIXEL_2023_MIDYEAR_EXPERIENCE",
+            "PIXEL_2024_EXPERIENCE",
+            "PIXEL_2024_MIDYEAR_EXPERIENCE"
+    );
+
+    private static volatile String[] sCertifiedProps;
+    private static volatile String sStockFp;
+
     private static volatile String sProcessName;
-    private static volatile boolean sIsGms, sIsFinsky, sIsPhotos;
+    private static volatile boolean sIsPixelDevice, sIsGms, sIsFinsky, sIsPhotos, sIsTablet;
 
     public static void setProps(Context context) {
         final String packageName = context.getPackageName();
@@ -70,41 +118,80 @@ public class PropImitationHooks {
             return;
         }
 
+        final Resources res = context.getResources();
+        if (res == null) {
+            Log.e(TAG, "Null resources");
+            return;
+        }
+
+        sCertifiedProps = res.getStringArray(R.array.config_certifiedBuildProperties);
+        sStockFp = res.getString(R.string.config_stockFingerprint);
+        sIsTablet = res.getBoolean(R.bool.config_spoofasTablet);
+
         sProcessName = processName;
+        sIsPixelDevice = Build.MANUFACTURER.equals("Google") && Build.MODEL.contains("Pixel");
         sIsGms = packageName.equals(PACKAGE_GMS) && processName.equals(PROCESS_GMS_UNSTABLE);
         sIsFinsky = packageName.equals(PACKAGE_FINSKY);
+        sIsPhotos = packageName.equals(PACKAGE_GPHOTOS);
 
-        /* Set Certified Properties for GMSCore
-         * Set Stock Fingerprint for ARCore
-         * Set custom model for Netflix
+        /* Set certified properties for GMSCore
+         * Set stock fingerprint for ARCore
+         * Set Pixel 9 Pro XL / Pixel Tablet for Google, ASI and GMS device configurator
          */
-        if (sIsGms) {
-            setCertifiedPropsForGms();
-        } else if (!sStockFp.isEmpty() && packageName.equals(PACKAGE_ARCORE)) {
-            dlog("Setting stock fingerprint for: " + packageName);
-            setPropValue("FINGERPRINT", sStockFp);
-        } else if (!sNetflixModel.isEmpty() && packageName.equals(PACKAGE_NETFLIX)) {
-            dlog("Setting model to " + sNetflixModel + " for Netflix");
-            setPropValue("MODEL", sNetflixModel);
+        switch (processName) {
+            case PROCESS_GMS_UNSTABLE:
+                dlog("Setting certified props for: " + packageName + " process: " + processName);
+                setCertifiedPropsForGms();
+                return;
+        }
+
+        switch (packageName) {
+            case PACKAGE_GMS:
+            case PACKAGE_SETUPWIZARD:
+            case PACKAGE_SUBSCRIPTION_RED:
+            case PACKAGE_VELVET:
+                if (sIsTablet) {
+                    dlog("Spoofing Pixel Tablet for: " + packageName + " process: " + processName);
+                    setProps(sPixelTabletProps);
+                } else {
+                    dlog("Spoofing Pixel 9 Pro XL for: " + packageName + " process: " + processName);
+                    setProps(sPixelNineProps);
+                }
+                return;
+            case PACKAGE_ARCORE:
+                if (!sStockFp.isEmpty()) {
+                    dlog("Setting stock fingerprint for: " + packageName);
+                    setPropValue("FINGERPRINT", sStockFp);;
+                }
+                return;
         }
     }
 
-    private static void setPropValue(String key, Object value) {
+    private static void setProps(Map<String, String> props) {
+        props.forEach(PropImitationHooks::setPropValue);
+    }
+
+    private static void setPropValue(String key, String value) {
         try {
             dlog("Setting prop " + key + " to " + value.toString());
-            Field field = Build.class.getDeclaredField(key);
+            Class clazz = Build.class;
+            if (key.startsWith("VERSION.")) {
+                clazz = Build.VERSION.class;
+                key = key.substring(8);
+            }
+            Field field = clazz.getDeclaredField(key);
             field.setAccessible(true);
-            field.set(null, value);
+            // Cast the value to int if it's an integer field, otherwise string.
+            field.set(null, field.getType().equals(Integer.TYPE) ? Integer.parseInt(value) : value);
             field.setAccessible(false);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
+        } catch (Exception e) {
             Log.e(TAG, "Failed to set prop " + key, e);
         }
     }
 
     private static void setCertifiedPropsForGms() {
-        if (sCertifiedProps.length != 4) {
-            Log.e(TAG, "Insufficient array size for certified props: "
-                    + sCertifiedProps.length + ", required 4");
+        if (sCertifiedProps.length == 0) {
+            dlog("Certified props are not set");
             return;
         }
         final boolean was = isGmsAddAccountActivityOnTop();
@@ -121,10 +208,7 @@ public class PropImitationHooks {
         };
         if (!was) {
             dlog("Spoofing build for GMS");
-            setPropValue("DEVICE", sCertifiedProps[0]);
-            setPropValue("PRODUCT", sCertifiedProps[1]);
-            setPropValue("MODEL", sCertifiedProps[2]);
-            setPropValue("FINGERPRINT", sCertifiedProps[3]);
+            setCertifiedProps();
         } else {
             dlog("Skip spoofing build for GMS, because GmsAddAccountActivityOnTop");
         }
@@ -132,6 +216,18 @@ public class PropImitationHooks {
             ActivityTaskManager.getService().registerTaskStackListener(taskStackListener);
         } catch (Exception e) {
             Log.e(TAG, "Failed to register task stack listener!", e);
+        }
+    }
+
+    private static void setCertifiedProps() {
+        for (String entry : sCertifiedProps) {
+            // Each entry must be of the format FIELD:value
+            final String[] fieldAndProp = entry.split(":", 2);
+            if (fieldAndProp.length != 2) {
+                Log.e(TAG, "Invalid entry in certified props: " + entry);
+                continue;
+            }
+            setPropValue(fieldAndProp[0], fieldAndProp[1]);
         }
     }
 
@@ -172,6 +268,16 @@ public class PropImitationHooks {
             dlog("Blocked key attestation sIsGms=" + sIsGms + " sIsFinsky=" + sIsFinsky);
             throw new UnsupportedOperationException();
         }
+    }
+
+    public static boolean hasSystemFeature(String name, boolean has) {
+        if (sIsPhotos && !sIsPixelDevice && has
+                && (sPixelFeatures.stream().anyMatch(name::contains)
+                || sTensorFeatures.stream().anyMatch(name::contains))) {
+            dlog("Blocked system feature " + name + " for Google Photos");
+            has = false;
+        }
+        return has;
     }
 
     public static void dlog(String msg) {

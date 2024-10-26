@@ -727,9 +727,9 @@ public class GlobalActionsDialogLite implements DialogInterface.OnDismissListene
                 default:
                     Log.e(TAG, "Invalid global action key " + actionKey);
         }
-	}
         // Add here so we don't add more than one.
         addedKeys.add(actionKey);
+        }
 
         if (tempActions.contains(restartAction)) {
             // transfer restart and advanced restart to their own list of power actions
